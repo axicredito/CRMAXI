@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AXI - CRM Crédito Imobiliário</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        :root {
+            --primary: #1B4D3E;
+            --accent: #D4AF37;
+            --bg: #F8F9F7;
+            --border: #E8EAE6;
+            --text: #2C3E50;
+        }
+        
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, #2C5F4F 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .kanban-container {
+            display: flex;
+            gap: 16px;
+            padding: 20px;
+            overflow-x: auto;
+            flex: 1;
+            background: #f5f5f5;
+        }
+        
+        .column {
+            flex: 0 0 280px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .column-header {
+            background: var(--primary);
+            color: white;
+            padding: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            border-bottom: 3px solid var(--accent);
+        }
+        
+        .column-count {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: auto;
+        }
+        
+        .cards-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        
+        .card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: move;
+            transition: all 0.2s;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .card-title {
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        
+        .card-client {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+        
+        .card-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, var(--primary), #2C5F4F);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .modal h2 {
+            margin-bottom: 16px;
+            color: var(--primary);
+        }
+        
+        .form-group {
+            margin-bottom: 12px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: var(--text);
+        }
+        
+        .btn-danger {
+            background: #c73a3a;
+        }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const CRM = () => {
+    const stages = ['lead-novo', 'aguardando-docs', 'analise-credito', 'aprovado', 'analise-juridica', 'registro', 'concluido'];
+    const stageNames = {
+        'lead-novo': 'Lead Novo',
+        'aguardando-docs': 'Aguardando Docs',
+        'analise-credito': 'Análise Crédito',
+        'aprovado': 'Aprovado',
+        'analise-juridica': 'Análise Jurídica',
+        'registro': 'Registro Imóveis',
+        'concluido': 'Concluído'
+    };
+    
+    const [deals, setDeals] = useState([]);
+    const [showForm, setShowForm] = useState(false);
+    const [editingDeal, setEditingDeal] = useState(null);
+    const [formData, setFormData] = useState({
+        title: '', client: '', phone: '', email: '',
+        stage: 'lead-novo', value: 0, commission: 10
+    });
+    
+    // Carregar dados
+    useEffect(() => {
+        const saved = localStorage.getItem('crm_deals');
+        if (saved) setDeals(JSON.parse(saved));
+    }, []);
+    
+    // Salvar dados
+    useEffect(() => {
+        localStorage.setItem('crm_deals', JSON.stringify(deals));
+    }, [deals]);
+    
+    const addDeal = () => {
+        if (!formData.title || !formData.client) {
+            alert('Preencha título e cliente');
+            return;
+        }
+        
+        if (editingDeal) {
+            setDeals(deals.map(d => d.id === editingDeal.id ? { ...editingDeal, ...formData } : d));
+            setEditingDeal(null);
+        } else {
+            setDeals([...deals, { id: Date.now(), ...formData, createdAt: new Date().toISOString() }]);
+        }
+        
+        setFormData({ title: '', client: '', phone: '', email: '', stage: 'lead-novo', value: 0, commission: 10 });
+        setShowForm(false);
+    };
+    
+    const deleteDeal = (id) => {
+        setDeals(deals.filter(d => d.id !== id));
+    };
+    
+    const moveDeal = (deal, newStage) => {
+        setDeals(deals.map(d => d.id === deal.id ? { ...d, stage: newStage } : d));
+    };
+    
+    const openForm = (deal = null) => {
+        if (deal) {
+            setEditingDeal(deal);
+            setFormData(deal);
+        } else {
+            setFormData({ title: '', client: '', phone: '', email: '', stage: 'lead-novo', value: 0, commission: 10 });
+        }
+        setShowForm(true);
+    };
+    
+    const getStageDeals = (stage) => deals.filter(d => d.stage === stage);
+    
+    return (
+        <div className="app">
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div className="header">
+                    <h1>💰 CRM AXI</h1>
+                    <button className="btn" onClick={() => openForm()}>
+                        ➕ Novo Deal
+                    </button>
+                </div>
+                
+                <div className="kanban-container">
+                    {stages.map(stage => (
+                        <div key={stage} className="column">
+                            <div className="column-header" style={{ display: 'flex', alignItems: 'center' }}>
+                                {stageNames[stage]}
+                                <div className="column-count">
+                                    {getStageDeals(stage).length}
+                                </div>
+                            </div>
+                            <div className="cards-list">
+                                {getStageDeals(stage).map(deal => (
+                                    <div key={deal.id} className="card" draggable onDragStart={(e) => e.dataTransfer.setData('dealId', deal.id)} 
+                                         onDragOver={(e) => e.preventDefault()}
+                                         onDrop={(e) => {
+                                             e.preventDefault();
+                                             const draggedId = parseInt(e.dataTransfer.getData('dealId'));
+                                             const draggedDeal = deals.find(d => d.id === draggedId);
+                                             if (draggedDeal) moveDeal(draggedDeal, stage);
+                                         }}>
+                                        <div className="card-title">{deal.title}</div>
+                                        <div className="card-client">👤 {deal.client}</div>
+                                        <div className="card-value">R$ {parseFloat(deal.value || 0).toFixed(2)}</div>
+                                        <div style={{ marginTop: '8px', display: 'flex', gap: '4px', fontSize: '12px' }}>
+                                            <button onClick={() => openForm(deal)} style={{ flex: 1, padding: '4px', background: '#e3f2fd', border: '1px solid #90caf9', borderRadius: '4px', cursor: 'pointer' }}>✏️ Editar</button>
+                                            <button onClick={() => deleteDeal(deal.id)} style={{ flex: 1, padding: '4px', background: '#ffebee', border: '1px solid #ef5350', borderRadius: '4px', cursor: 'pointer' }}>🗑️ Deletar</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            
+            {showForm && (
+                <div className="modal" onClick={() => setShowForm(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h2>{editingDeal ? '✏️ Editar Deal' : '➕ Novo Deal'}</h2>
+                        
+                        <div className="form-group">
+                            <label>Título do Deal *</label>
+                            <input value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} placeholder="Ex: Financiamento Imóvel ABC" />
+                        </div>
+                        
+                        <div className="form-group">
+                            <label>Cliente *</label>
+                            <input value={formData.client} onChange={(e) => setFormData({...formData, client: e.target.value})} placeholder="Nome do cliente" />
+                        </div>
+                        
+                        <div className="form-group">
+                            <label>Telefone</label>
+                            <input value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="(11) 99999-9999" />
+                        </div>
+                        
+                        <div className="form-group">
+                            <label>Email</label>
+                            <input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="email@cliente.com" />
+                        </div>
+                        
+                        <div className="form-group">
+                            <label>Estágio</label>
+                            <select value={formData.stage} onChange={(e) => setFormData({...formData, stage: e.target.value})}>
+                                {stages.map(s => <option key={s} value={s}>{stageNames[s]}</option>)}
+                            </select>
+                        </div>
+                        
+                        <div className="form-group">
+                            <label>Valor (R$)</label>
+                            <input type="number" value={formData.value} onChange={(e) => setFormData({...formData, value: e.target.value})} placeholder="0.00" />
+                        </div>
+                        
+                        <div className="form-group">
+                            <label>Comissão (%)</label>
+                            <input type="number" value={formData.commission} onChange={(e) => setFormData({...formData, commission: e.target.value})} placeholder="10" />
+                        </div>
+                        
+                        <div className="form-actions">
+                            <button className="btn" onClick={addDeal}>{editingDeal ? '💾 Atualizar' : '✅ Criar Deal'}</button>
+                            <button className="btn btn-secondary" onClick={() => setShowForm(false)}>❌ Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+ReactDOM.render(<CRM />, document.getElementById('root'));
+</script>
+</body>
+</html>
