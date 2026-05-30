@@ -1,0 +1,2402 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AXI - CRM Crédito Imobiliário</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1B4D3E;
+            --primary-light: #2C5F4F;
+            --primary-dark: #0F3028;
+            --accent: #D4AF37;
+            --accent-light: #E8C547;
+            --success: #1B4D3E;
+            --danger: #C73A3A;
+            --warning: #E8B923;
+            --bg: #F8F9F7;
+            --bg-dark: #1E293B;
+            --surface: #FFFFFF;
+            --border: #E8EAE6;
+            --text: #2C3E50;
+            --text-light: #7A8B99;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            color: white;
+            padding: 24px 16px;
+            overflow-y: auto;
+            border-right: 2px solid var(--accent);
+            box-shadow: 4px 0 12px rgba(27, 77, 62, 0.2);
+            transition: width 0.3s ease, padding 0.3s ease;
+            position: relative;
+        }
+
+        .sidebar.collapsed {
+            width: 100px;
+            padding: 24px 12px;
+        }
+
+        .toggle-sidebar {
+            position: absolute;
+            top: 20px;
+            right: -15px;
+            background: var(--accent);
+            color: var(--primary);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(27, 77, 62, 0.3);
+            z-index: 100;
+        }
+
+        .toggle-sidebar:hover {
+            background: var(--accent-light);
+            transform: scale(1.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.5px;
+            padding: 12px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo {
+            margin-bottom: 24px;
+            padding: 8px;
+            font-size: 20px;
+            justify-content: center;
+        }
+
+        .sidebar.collapsed .logo-text {
+            display: none;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 2px solid transparent;
+        }
+
+        .sidebar.collapsed .nav-item {
+            padding: 12px;
+            justify-content: center;
+            gap: 0;
+        }
+
+        .sidebar.collapsed .nav-item span:last-child {
+            display: none;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.15);
+            transform: translateX(4px);
+        }
+
+        .nav-item.active {
+            background: rgba(255,255,255,0.25);
+            border-color: var(--accent);
+            color: var(--accent-light);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, white 0%, #FAFBF8 100%);
+            padding: 16px 32px;
+            border-bottom: 2px solid var(--accent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(27, 77, 62, 0.08);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .search-box {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 250px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.1);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(27, 77, 62, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(27, 77, 62, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-add-stage {
+            background: transparent;
+            color: var(--primary);
+            padding: 12px;
+            border-radius: 8px;
+            width: 100%;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px dashed var(--primary);
+            opacity: 0.6;
+        }
+
+        .btn-add-stage:hover {
+            background: rgba(27, 77, 62, 0.08);
+            opacity: 1;
+            box-shadow: 0 2px 8px rgba(27, 77, 62, 0.15);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+        }
+
+        /* KANBAN */
+        .kanban-board {
+            display: flex;
+            gap: 20px;
+            padding: 20px 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            min-height: 700px;
+            scroll-behavior: smooth;
+        }
+
+        .kanban-board::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .kanban-board::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        .kanban-board::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        .kanban-column {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            min-width: 240px;
+            flex-shrink: 0;
+        }
+
+        .kanban-header {
+            padding: 10px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: flex-start;
+            font-size: 12px;
+        }
+
+        .kanban-count {
+            background: rgba(255,255,255,0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .kanban-cards {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-height: 350px;
+        }
+
+        .kanban-cards.drag-over {
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        .deal-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px;
+            cursor: move;
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--primary);
+            user-select: none;
+            position: relative;
+        }
+
+        .deal-card:hover {
+            box-shadow: 0 4px 12px rgba(27, 77, 62, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .deal-days-badge {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: var(--accent);
+            color: var(--primary);
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .deal-title {
+            font-weight: 600;
+            font-size: 12px;
+            margin-bottom: 3px;
+            color: var(--text);
+            line-height: 1.2;
+            padding-right: 30px;
+        }
+
+        .deal-client {
+            font-size: 10px;
+            color: var(--text-light);
+            margin-bottom: 4px;
+            line-height: 1.2;
+        }
+
+        .deal-value {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 12px;
+        }
+
+        .deal-revenue {
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .modal h2 {
+            margin-bottom: 20px;
+            color: var(--primary);
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(27, 77, 62, 0.1);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+
+        /* PARTNERS */
+        .partners-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .partners-list {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .partners-list-header {
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            font-weight: 600;
+        }
+
+        .partners-list-items {
+            padding: 12px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .partner-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .partner-item:hover {
+            background: var(--bg);
+        }
+
+        .partner-item.active {
+            background: rgba(27, 77, 62, 0.1);
+            border-left: 3px solid var(--primary);
+            padding-left: 9px;
+        }
+
+        .partner-name {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .partner-meta {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .partners-form {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 20px;
+        }
+
+        .partners-form h3 {
+            color: var(--primary);
+            margin-bottom: 16px;
+            font-size: 16px;
+        }
+
+        .products-checkbox {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 12px 0;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+            margin: 0;
+        }
+
+        /* INFO CARDS */
+        .info-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            margin-bottom: 16px;
+        }
+
+        .info-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .info-item {
+            flex: 1;
+        }
+
+        .info-label {
+            font-size: 11px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .table tr:hover {
+            background: var(--bg);
+        }
+
+        .table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: rgba(27, 77, 62, 0.15);
+            color: var(--success);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-light);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            transform: translateY(-4px);
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .metric-change {
+            font-size: 12px;
+            color: var(--success);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-light);
+        }
+
+        /* LOGIN */
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0F3028 0%, #1B4D3E 50%, #2C5F4F 100%);
+        }
+
+        .login-box {
+            background: white;
+            border-radius: 16px;
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .login-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 12px;
+        }
+
+        .login-subtitle {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        .login-form { display: flex; flex-direction: column; gap: 16px; }
+
+        .login-input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .login-input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        .login-input-group input:focus { border-color: var(--primary); }
+
+        .login-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .login-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .login-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .login-error {
+            background: rgba(199, 58, 58, 0.1);
+            border: 1px solid #C73A3A;
+            color: #C73A3A;
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .logout-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .logout-btn:hover { background: rgba(255,255,255,0.25); }
+
+        .loading-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0F3028 0%, #1B4D3E 100%);
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        // SUPABASE CLIENT
+        try {
+            const supabaseUrl = 'https://rjlzmwzxpluajdppvlvl.supabase.co';
+            const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqbHptd3p4cGx1YWpkcHB2bHZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwOTA3NjgsImV4cCI6MjA5NTY2Njc2OH0.ZUk2HM_efE6LKyKnLGS7wUsKTjWl-oyvwKlFlfuuIA8';
+            const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+        // ─── TELA DE LOGIN ───────────────────────────────────────────────────────────
+        function LoginPage({ onLogin }) {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError('');
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) setError('E-mail ou senha incorretos.');
+                setLoading(false);
+            };
+
+            return (
+                <div className="login-page">
+                    <div className="login-box">
+                        <div className="login-logo">
+                            <svg width="60" height="60" viewBox="0 0 60 60">
+                                <rect width="60" height="60" rx="12" fill="#1B4D3E"/>
+                                <text x="30" y="42" textAnchor="middle" fill="#D4AF37" fontSize="28" fontWeight="800" fontFamily="Arial">AXI</text>
+                            </svg>
+                            <div className="login-title">AXI Crédito Imobiliário</div>
+                            <div className="login-subtitle">CRM — Acesso Restrito à Equipe</div>
+                        </div>
+                        <form className="login-form" onSubmit={handleLogin}>
+                            {error && <div className="login-error">⚠️ {error}</div>}
+                            <div className="login-input-group">
+                                <label>E-mail</label>
+                                <input type="email" placeholder="seu@email.com" value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
+                            </div>
+                            <div className="login-input-group">
+                                <label>Senha</label>
+                                <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
+                            </div>
+                            <button className="login-btn" type="submit" disabled={loading}>
+                                {loading ? '⏳ Entrando...' : '🔐 Entrar no CRM'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // ─── APP RAIZ (gerencia auth) ────────────────────────────────────────────────
+        function App() {
+            const [session, setSession] = useState(undefined);
+
+            useEffect(() => {
+                supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+                const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+                return () => subscription.unsubscribe();
+            }, []);
+
+            if (session === undefined) return <div className="loading-screen">⏳ Carregando...</div>;
+            if (!session) return <LoginPage />;
+            return <CRMApp session={session} />;
+        }
+
+        function CRMApp({ session }) {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [sidebarExpanded, setSidebarExpanded] = useState(true);
+            const [showModal, setShowModal] = useState(false);
+            const [modalType, setModalType] = useState(null);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [selectedDeal, setSelectedDeal] = useState(null);
+            const [editingDeal, setEditingDeal] = useState(false);
+            const [selectedPartner, setSelectedPartner] = useState(null);
+            
+            // Estágios
+            const stages = [
+                'suspenso',
+                'lead-novo',
+                'aguardando-documentos',
+                'analise-credito',
+                'aprovado',
+                'analise-juridica',
+                'registro-imoveis',
+                'concluido'
+            ];
+
+            const stageLabels = {
+                'lead-novo': '🔴 Lead Novo',
+                'suspenso': '⏸️ Suspenso',
+                'aguardando-documentos': '📋 Aguardando Documentos',
+                'analise-credito': '🔍 Análise de Crédito',
+                'aprovado': '✅ Aprovado',
+                'analise-juridica': '⚖️ Análise Jurídica',
+                'registro-imoveis': '🏠 Registro de Imóveis',
+                'concluido': '🎉 Concluído'
+            };
+
+            const productLabels = {
+                'financiamento-imovel': 'Financiamento Imobiliário',
+                'financiamento-veicular': 'Financiamento Veicular',
+                'credito-garantia-imovel': 'Crédito com Garantia em Imóvel',
+                'credito-garantia-veiculo': 'Crédito com Garantia em Veículo',
+                'financiamento-construcao': 'Financiamento para Construção',
+                'consorcio': 'Consórcio',
+                'antecipacao-recebiveis': 'Antecipação de Recebíveis'
+            };
+            
+            // DADOS — carregados do Supabase
+            const [contacts, setContacts] = useState([]);
+            const [deals, setDeals] = useState([]);
+            const [partners, setPartners] = useState([]);
+            const [loadingData, setLoadingData] = useState(true);
+
+            // Carregar dados do Supabase ao montar
+            useEffect(() => {
+                loadAll();
+            }, []);
+
+            const loadAll = async () => {
+                setLoadingData(true);
+                const [{ data: dealsData }, { data: partnersData }] = await Promise.all([
+                    supabase.from('deals').select('*').order('created_at', { ascending: false }),
+                    supabase.from('partners').select('*').order('created_at', { ascending: true })
+                ]);
+                if (dealsData) setDeals(dealsData.map(d => ({
+                    ...d,
+                    commissionValue: d.commission_value,
+                    notes: d.notes || [],
+                    tasks: d.tasks || []
+                })));
+                if (partnersData) setPartners(partnersData.map(p => ({
+                    ...p,
+                    productCommissions: p.product_commissions || {}
+                })));
+                setLoadingData(false);
+            };
+
+            const [products, setProducts] = useState(Object.keys(productLabels).map((key, index) => ({
+                id: index + 1, key: key, name: productLabels[key]
+            })));
+
+            const [activities, setActivities] = useState([]);
+            const [formData, setFormData] = useState({});
+            const [noteText, setNoteText] = useState('');
+            const [newTaskText, setNewTaskText] = useState('');
+            const [newTaskDate, setNewTaskDate] = useState('');
+
+            // FUNÇÕES MODAIS
+            const openModal = (type, deal = null, stage = null) => {
+                setModalType(type);
+                setFormData(stage ? { stage } : {});
+                setNoteText('');
+                if (deal) setSelectedDeal(deal);
+                setShowModal(true);
+            };
+
+            const closeModal = () => {
+                setShowModal(false);
+                setFormData({});
+                setSelectedDeal(null);
+                setNoteText('');
+            };
+
+            // DEALS — Supabase
+            const handleAddDeal = async () => {
+                if (formData.title && formData.client && formData.phone && formData.email && formData.value && formData.partner) {
+                    const partner = partners.find(p => p.name === formData.partner);
+                    let commission = formData.commission ? parseFloat(formData.commission) : 0;
+                    if (partner && formData.product) commission = partner.productCommissions?.[formData.product] || commission;
+                    const commissionValue = (parseFloat(formData.value) * commission) / 100;
+                    const { data, error } = await supabase.from('deals').insert([{
+                        title: formData.title,
+                        client: formData.client,
+                        phone: formData.phone,
+                        email: formData.email,
+                        product: formData.product || '',
+                        partner: formData.partner,
+                        value: parseFloat(formData.value),
+                        commission: commission,
+                        commission_value: commissionValue,
+                        stage: formData.stage || 'lead-novo',
+                        date: new Date().toISOString(),
+                        notes: [],
+                        tasks: []
+                    }]).select().single();
+                    if (!error && data) {
+                        setDeals([{ ...data, commissionValue: data.commission_value, notes: [], tasks: [] }, ...deals]);
+                        closeModal();
+                    }
+                } else {
+                    alert('Por favor, preencha todos os campos obrigatórios (*)');
+                }
+            };
+
+            const handleDeleteDeal = async (id) => {
+                await supabase.from('deals').delete().eq('id', id);
+                setDeals(deals.filter(d => d.id !== id));
+            };
+
+            // DRAG AND DROP
+            const handleDragStart = (e, dealId) => {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('dealId', dealId);
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            };
+
+            const handleDrop = async (e, newStage) => {
+                e.preventDefault();
+                const dealId = e.dataTransfer.getData('dealId');
+                if (dealId) {
+                    await supabase.from('deals').update({ stage: newStage }).eq('id', dealId);
+                    setDeals(deals.map(deal => deal.id === dealId ? { ...deal, stage: newStage } : deal));
+                }
+            };
+
+            // PARCEIROS — Supabase
+            const handleSavePartner = async () => {
+                if (selectedPartner) {
+                    const { error } = await supabase.from('partners').update({
+                        name: selectedPartner.name,
+                        fee: selectedPartner.fee,
+                        products: selectedPartner.products,
+                        criteria: selectedPartner.criteria,
+                        contact: selectedPartner.contact,
+                        email: selectedPartner.email,
+                        logo: selectedPartner.logo,
+                        product_commissions: selectedPartner.productCommissions
+                    }).eq('id', selectedPartner.id);
+                    if (!error) {
+                        setPartners(partners.map(p => p.id === selectedPartner.id ? selectedPartner : p));
+                        setSelectedPartner(null);
+                    }
+                } else {
+                    if (formData.name && formData.fee) {
+                        const productCommissions = Object.keys(productLabels).reduce((acc, key) => {
+                            acc[key] = parseFloat(formData.fee); return acc;
+                        }, {});
+                        const { data, error } = await supabase.from('partners').insert([{
+                            name: formData.name,
+                            fee: parseFloat(formData.fee),
+                            products: formData.products || [],
+                            criteria: formData.criteria || '',
+                            contact: formData.contact || '',
+                            email: formData.email || '',
+                            logo: formData.logo || null,
+                            product_commissions: productCommissions
+                        }]).select().single();
+                        if (!error && data) {
+                            setPartners([...partners, { ...data, productCommissions: data.product_commissions }]);
+                            setFormData({});
+                        }
+                    }
+                }
+            };
+
+            const handleDeletePartner = async (id) => {
+                await supabase.from('partners').delete().eq('id', id);
+                setPartners(partners.filter(p => p.id !== id));
+                setSelectedPartner(null);
+            };
+
+            const handleLogoUpload = (e, isEditing = false) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const base64 = event.target.result;
+                        if (isEditing) setSelectedPartner({...selectedPartner, logo: base64});
+                        else setFormData({...formData, logo: base64});
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            // Helper: atualiza deal no Supabase + estado local
+            const updateDealInDb = async (dealId, updates) => {
+                const dbUpdates = { ...updates };
+                if ('commissionValue' in dbUpdates) { dbUpdates.commission_value = dbUpdates.commissionValue; delete dbUpdates.commissionValue; }
+                await supabase.from('deals').update(dbUpdates).eq('id', dealId);
+                const updated = deals.map(d => d.id === dealId ? { ...d, ...updates } : d);
+                setDeals(updated);
+                if (selectedDeal?.id === dealId) setSelectedDeal(updated.find(d => d.id === dealId));
+                return updated;
+            };
+
+            // NOTAS
+            const handleAddNote = async () => {
+                if (noteText.trim() && selectedDeal) {
+                    const newNotes = [...selectedDeal.notes, { id: Date.now(), text: noteText, date: new Date().toLocaleString('pt-BR') }];
+                    await updateDealInDb(selectedDeal.id, { notes: newNotes });
+                    setNoteText('');
+                }
+            };
+
+            const handleDeleteNote = async (noteId) => {
+                const newNotes = selectedDeal.notes.filter(n => n.id !== noteId);
+                await updateDealInDb(selectedDeal.id, { notes: newNotes });
+            };
+
+            const handleSaveDealEdit = async () => {
+                if (selectedDeal.title && selectedDeal.client && selectedDeal.phone && selectedDeal.email && selectedDeal.value && selectedDeal.partner) {
+                    const commission = selectedDeal.commission ? parseFloat(selectedDeal.commission) : 0;
+                    const commissionValue = (parseFloat(selectedDeal.value) * commission) / 100;
+                    await updateDealInDb(selectedDeal.id, { ...selectedDeal, commission, commissionValue });
+                    setEditingDeal(false);
+                } else {
+                    alert('Por favor, preencha todos os campos obrigatórios (*)');
+                }
+            };
+
+            const handleAddTask = async () => {
+                if (newTaskText.trim() && selectedDeal) {
+                    const newTasks = [...selectedDeal.tasks, { id: Date.now(), text: newTaskText, completed: false, date: new Date().toLocaleString('pt-BR'), scheduledDate: newTaskDate || null }];
+                    await updateDealInDb(selectedDeal.id, { tasks: newTasks });
+                    setNewTaskText('');
+                    setNewTaskDate('');
+                }
+            };
+
+            const handleToggleTask = async (taskId) => {
+                const newTasks = selectedDeal.tasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t);
+                await updateDealInDb(selectedDeal.id, { tasks: newTasks });
+            };
+
+            const handleDeleteTask = async (taskId) => {
+                const newTasks = selectedDeal.tasks.filter(t => t.id !== taskId);
+                await updateDealInDb(selectedDeal.id, { tasks: newTasks });
+            };
+
+            const getTaskStatus = (task) => {
+                if (!task.scheduledDate) return null;
+                
+                const today = new Date().toISOString().split('T')[0];
+                const taskDate = task.scheduledDate.split('T')[0];
+                
+                if (taskDate < today) return { status: 'overdue', label: '🔴 VENCIDA', color: '#C73A3A' };
+                if (taskDate === today) return { status: 'today', label: '⭐ HOJE', color: '#D4AF37' };
+                return { status: 'scheduled', label: '📅 Agendada', color: '#1B4D3E' };
+            };
+
+            const getProductMetrics = () => {
+                const metrics = {};
+                
+                Object.keys(productLabels).forEach(productId => {
+                    const productDeals = deals.filter(d => d.product === productId && d.stage === 'concluido');
+                    
+                    if (productDeals.length > 0) {
+                        let totalDays = 0;
+                        productDeals.forEach(deal => {
+                            const startDate = new Date(deal.date);
+                            const endDate = new Date();
+                            const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+                            totalDays += days;
+                        });
+                        
+                        const avgDays = Math.round(totalDays / productDeals.length);
+                        const completedCount = productDeals.length;
+                        const totalDeals = deals.filter(d => d.product === productId).length;
+                        const conversionRate = Math.round((completedCount / totalDeals) * 100);
+                        
+                        metrics[productId] = {
+                            avgDays,
+                            completedCount,
+                            totalDeals,
+                            conversionRate
+                        };
+                    }
+                });
+                
+                return metrics;
+            };
+
+            const getDaysInStage = (deal) => {
+                const startDate = new Date(deal.date);
+                const endDate = new Date();
+                const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+                return days;
+            };
+
+            const getRevenuePotential = (deal) => {
+                return deal.value * (deal.commission / 100);
+            };
+
+            // CÁLCULOS
+            const totalValue = deals.reduce((acc, d) => acc + d.value, 0);
+            const dealsCount = deals.length;
+            const closedDeals = deals.filter(d => d.stage === 'concluido').length;
+
+            // FILTROS
+            const filteredDeals = deals.filter(d =>
+                d.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                d.client.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            if (loadingData) return (
+                <div className="loading-screen">
+                    <div style={{ textAlign: 'center' }}>
+                        <svg width="60" height="60" viewBox="0 0 60 60" style={{ marginBottom: '16px' }}>
+                            <rect width="60" height="60" rx="12" fill="#D4AF37"/>
+                            <text x="30" y="42" textAnchor="middle" fill="#1B4D3E" fontSize="28" fontWeight="800" fontFamily="Arial">AXI</text>
+                        </svg>
+                        <div>⏳ Carregando dados...</div>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="app-container">
+                    {/* SIDEBAR */}
+                    <aside className={`sidebar ${!sidebarExpanded ? 'collapsed' : ''}`}>
+                        <button 
+                            className="toggle-sidebar" 
+                            onClick={() => setSidebarExpanded(!sidebarExpanded)}
+                            title={sidebarExpanded ? "Recolher menu" : "Expandir menu"}
+                        >
+                            {sidebarExpanded ? '◀' : '▶'}
+                        </button>
+                        <div className="logo">
+                            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                                <rect x="6" y="10" width="4" height="16" fill="#D4AF37" rx="1"/>
+                                <rect x="14" y="6" width="4" height="20" fill="#D4AF37" rx="1"/>
+                                <rect x="22" y="10" width="4" height="16" fill="#D4AF37" rx="1"/>
+                                <polygon points="8,8 12,4 16,8" fill="#D4AF37"/>
+                                <polygon points="16,4 20,8 20,4" fill="#D4AF37"/>
+                                <polygon points="24,8 28,4 32,8" fill="#D4AF37"/>
+                            </svg>
+                            <div className="logo-text" style={{ lineHeight: '1.1' }}>
+                                <div style={{ fontSize: '12px', fontWeight: '700', letterSpacing: '0.5px' }}>AXI</div>
+                                <div style={{ fontSize: '8px', fontWeight: '600', opacity: '0.9' }}>CRÉDITO</div>
+                            </div>
+                        </div>
+                        <nav className="nav-menu">
+                            <div className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+                                <span>📈</span> <span>Dashboard</span>
+                            </div>
+                            <div className={`nav-item ${activeTab === 'kanban' ? 'active' : ''}`} onClick={() => setActiveTab('kanban')}>
+                                <span>📋</span> <span>Pipeline</span>
+                            </div>
+                            <div className={`nav-item ${activeTab === 'today-tasks' ? 'active' : ''}`} onClick={() => setActiveTab('today-tasks')}>
+                                <span>⭐</span> <span>Tarefas de Hoje</span>
+                            </div>
+                            <div className={`nav-item ${activeTab === 'deals' ? 'active' : ''}`} onClick={() => setActiveTab('deals')}>
+                                <span>💰</span> <span>Oportunidades</span>
+                            </div>
+                            <div className={`nav-item ${activeTab === 'funil' ? 'active' : ''}`} onClick={() => setActiveTab('funil')}>
+                                <span>📊</span> <span>Funil</span>
+                            </div>
+                            <div className={`nav-item ${activeTab === 'metrics' ? 'active' : ''}`} onClick={() => setActiveTab('metrics')}>
+                                <span>📈</span> <span>Métricas</span>
+                            </div>
+                            <div className={`nav-item ${activeTab === 'produtos' ? 'active' : ''}`} onClick={() => setActiveTab('produtos')}>
+                                <span>📦</span> <span>Produtos</span>
+                            </div>
+                            <div className={`nav-item ${activeTab === 'partners' ? 'active' : ''}`} onClick={() => setActiveTab('partners')}>
+                                <span>🤝</span> <span>Parceiros</span>
+                            </div>
+                        </nav>
+                    </aside>
+
+                    {/* MAIN */}
+                    <div className="main-content">
+                        <header className="header">
+                            <h1>
+                                {activeTab === 'dashboard' && '📊 Dashboard'}
+                                {activeTab === 'kanban' && '📋 Pipeline de Vendas'}
+                                {activeTab === 'deals' && '💰 Oportunidades'}
+                                {activeTab === 'funil' && '📊 Funil de Vendas'}
+                                {activeTab === 'produtos' && '📦 Produtos'}
+                                {activeTab === 'partners' && '🤝 Parceiros'}
+                            </h1>
+                            <div className="header-actions">
+                                <input type="text" className="search-box" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                {(activeTab === 'deals' || activeTab === 'kanban') && (
+                                    <button className="btn btn-primary" onClick={() => openModal('deal')}>
+                                        ➕ Novo Deal
+                                    </button>
+                                )}
+                                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', marginLeft: '8px' }}>
+                                    👤 {session?.user?.email?.split('@')[0]}
+                                </span>
+                                <button className="logout-btn" onClick={() => supabase.auth.signOut()}>
+                                    🚪 Sair
+                                </button>
+                            </div>
+                            <svg width="48" height="48" viewBox="0 0 60 70" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginLeft: '24px' }}>
+                                {/* Telhado - Chevrons */}
+                                <polygon points="30,5 22,15 38,15" fill="#D4AF37" strokeWidth="1.5" stroke="#B8860B"/>
+                                <polygon points="22,15 14,25 46,25" fill="none" stroke="#D4AF37" strokeWidth="2.5"/>
+                                
+                                {/* Corpo do prédio */}
+                                <rect x="18" y="25" width="24" height="32" fill="none" stroke="#D4AF37" strokeWidth="2.5"/>
+                                
+                                {/* Janelas/Linhas verticais */}
+                                <line x1="24" y1="25" x2="24" y2="57" stroke="#D4AF37" strokeWidth="2.5"/>
+                                <line x1="30" y1="25" x2="30" y2="57" stroke="#D4AF37" strokeWidth="2.5"/>
+                                <line x1="36" y1="25" x2="36" y2="57" stroke="#D4AF37" strokeWidth="2.5"/>
+                                
+                                {/* Divisões horizontais */}
+                                <line x1="18" y1="35" x2="42" y2="35" stroke="#D4AF37" strokeWidth="1.5"/>
+                                <line x1="18" y1="45" x2="42" y2="45" stroke="#D4AF37" strokeWidth="1.5"/>
+                                
+                                {/* Base/Pé do prédio */}
+                                <rect x="16" y="57" width="28" height="4" fill="#B8860B"/>
+                                <line x1="14" y1="61" x2="46" y2="61" stroke="#D4AF37" strokeWidth="1.5"/>
+                            </svg>
+                        </header>
+
+                        <div className="content">
+                            {/* DASHBOARD */}
+                            {activeTab === 'dashboard' && (
+                                <div>
+                                    <div className="metrics-grid">
+                                        <div className="metric-card">
+                                            <div className="metric-label">Total em Pipeline</div>
+                                            <div className="metric-value">R$ {(totalValue / 1000000).toFixed(1)}M</div>
+                                            <div className="metric-change">↑ +12% este mês</div>
+                                        </div>
+                                        <div className="metric-card">
+                                            <div className="metric-label">Oportunidades</div>
+                                            <div className="metric-value">{dealsCount}</div>
+                                            <div className="metric-change">{closedDeals} concluídas</div>
+                                        </div>
+                                        <div className="metric-card">
+                                            <div className="metric-label">Taxa de Conversão</div>
+                                            <div className="metric-value">{dealsCount > 0 ? ((closedDeals / dealsCount) * 100).toFixed(0) : 0}%</div>
+                                            <div className="metric-change">Meta: 30%</div>
+                                        </div>
+                                        <div className="metric-card">
+                                            <div className="metric-label">Parceiros Ativos</div>
+                                            <div className="metric-value">{partners.length}</div>
+                                            <div className="metric-change">Conectados</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAREFAS DE HOJE */}
+                            {activeTab === 'today-tasks' && (
+                                <div style={{ padding: '20px' }}>
+                                    <h2 style={{ color: 'var(--primary)', marginBottom: '20px', fontSize: '24px' }}>⭐ Tarefas de Hoje</h2>
+                                    
+                                    {(() => {
+                                        const today = new Date().toISOString().split('T')[0];
+                                        let tasksForToday = [];
+                                        let overdueTasks = [];
+                                        
+                                        deals.forEach(deal => {
+                                            deal.tasks?.forEach(task => {
+                                                if (!task.completed && task.scheduledDate) {
+                                                    const taskDate = task.scheduledDate.split('T')[0];
+                                                    if (taskDate === today) {
+                                                        tasksForToday.push({ ...task, dealId: deal.id, dealTitle: deal.title, dealClient: deal.client });
+                                                    } else if (taskDate < today) {
+                                                        overdueTasks.push({ ...task, dealId: deal.id, dealTitle: deal.title, dealClient: deal.client });
+                                                    }
+                                                }
+                                            });
+                                        });
+                                        
+                                        return (
+                                            <div>
+                                                {overdueTasks.length > 0 && (
+                                                    <div style={{ marginBottom: '24px' }}>
+                                                        <h3 style={{ color: '#C73A3A', marginBottom: '12px', fontSize: '16px', fontWeight: '700' }}>🔴 Tarefas Vencidas ({overdueTasks.length})</h3>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                            {overdueTasks.map(task => (
+                                                                <div key={task.id} style={{ background: 'rgba(199, 58, 58, 0.08)', border: '2px solid #C73A3A', padding: '16px', borderRadius: '8px' }}>
+                                                                    <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text)', marginBottom: '4px' }}>{task.text}</div>
+                                                                    <div style={{ fontSize: '12px', color: 'var(--text-light)', marginBottom: '8px' }}>
+                                                                        📌 {task.dealTitle} - {task.dealClient}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '11px', color: '#C73A3A', fontWeight: '600' }}>
+                                                                        ⚠️ Vencida em: {new Date(task.scheduledDate).toLocaleString('pt-BR')}
+                                                                    </div>
+                                                                    <button className="btn btn-primary btn-sm" onClick={() => { openModal('deal-details', deals.find(d => d.id === task.dealId)); setActiveTab('kanban'); }} style={{ marginTop: '8px' }}>Ver Deal</button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                {tasksForToday.length > 0 && (
+                                                    <div style={{ marginBottom: '24px' }}>
+                                                        <h3 style={{ color: '#D4AF37', marginBottom: '12px', fontSize: '16px', fontWeight: '700' }}>⭐ Tarefas para Hoje ({tasksForToday.length})</h3>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                            {tasksForToday.map(task => (
+                                                                <div key={task.id} style={{ background: 'rgba(212, 175, 55, 0.15)', border: '2px solid #D4AF37', padding: '16px', borderRadius: '8px' }}>
+                                                                    <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text)', marginBottom: '4px' }}>{task.text}</div>
+                                                                    <div style={{ fontSize: '12px', color: 'var(--text-light)', marginBottom: '8px' }}>
+                                                                        📌 {task.dealTitle} - {task.dealClient}
+                                                                    </div>
+                                                                    <div style={{ fontSize: '11px', color: '#D4AF37', fontWeight: '600' }}>
+                                                                        🕐 Horário: {new Date(task.scheduledDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                                    </div>
+                                                                    <button className="btn btn-primary btn-sm" onClick={() => { openModal('deal-details', deals.find(d => d.id === task.dealId)); setActiveTab('kanban'); }} style={{ marginTop: '8px' }}>Ver Deal</button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                {tasksForToday.length === 0 && overdueTasks.length === 0 && (
+                                                    <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-light)' }}>
+                                                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
+                                                        <div style={{ fontSize: '16px', fontWeight: '600' }}>Nenhuma tarefa para hoje</div>
+                                                        <div style={{ fontSize: '13px', marginTop: '8px' }}>Parabéns! Você está em dia com suas tarefas!</div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
+                            {/* KANBAN */}
+                            {activeTab === 'kanban' && (
+                                <div className="kanban-board">
+                                    {stages.map(stage => (
+                                        <div key={stage} className="kanban-column">
+                                            <div className="kanban-header">
+                                                <div>
+                                                    <span>{stageLabels[stage]}</span>
+                                                    <span className="kanban-count" style={{ marginLeft: '8px' }}>{deals.filter(d => d.stage === stage).length}</span>
+                                                </div>
+                                                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--accent)', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                                    💰 R$ {deals.filter(d => d.stage === stage).reduce((acc, d) => acc + getRevenuePotential(d), 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                                                </div>
+                                            </div>
+                                            <div className="kanban-cards" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, stage)}>
+                                                {deals.filter(d => d.stage === stage).map(deal => (
+                                                    <div key={deal.id} className="deal-card" draggable="true" onDragStart={(e) => handleDragStart(e, deal.id)} onClick={() => openModal('deal-details', deal)}>
+                                                        <div className="deal-days-badge">{getDaysInStage(deal)}d</div>
+                                                        <div className="deal-title">{deal.title}</div>
+                                                        <div className="deal-client">{deal.client}</div>
+                                                        <div className="deal-value" style={{ marginTop: '4px' }}>R$ {deal.value.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</div>
+                                                        <div className="deal-revenue">💰 R$ {getRevenuePotential(deal).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</div>
+                                                        
+                                                        {deal.partner && (
+                                                            (() => {
+                                                                const partner = partners.find(p => p.name === deal.partner);
+                                                                return (
+                                                                    <div style={{ marginTop: '6px', padding: '4px 6px', background: 'var(--bg)', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px', minHeight: '28px' }}>
+                                                                        {partner?.logo && (
+                                                                            <img src={partner.logo} alt={partner.name} style={{ height: '20px', maxWidth: '45px', objectFit: 'contain', flexShrink: 0 }} title={partner.name} />
+                                                                        )}
+                                                                        <span style={{ fontSize: '10px', color: 'var(--text)', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                            {deal.partner}
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            })()
+                                                        )}
+                                                        
+                                                        {deal.tasks && deal.tasks.length > 0 && (
+                                                            <div style={{ marginTop: '4px', padding: '3px', background: 'rgba(212, 175, 55, 0.1)', borderRadius: '3px', fontSize: '10px', color: 'var(--accent)', fontWeight: '600', textAlign: 'center' }}>
+                                                                ✅ {deal.tasks.filter(t => !t.completed).length}/{deal.tasks.length}
+                                                            </div>
+                                                        )}
+                                                        {deal.tasks && deal.tasks.some(t => !t.completed && getTaskStatus(t)?.status === 'today') && (
+                                                            <div style={{ marginTop: '3px', padding: '4px', background: '#D4AF37', borderRadius: '3px', fontSize: '10px', color: '#1B4D3E', fontWeight: '700', textAlign: 'center', animation: 'pulse 2s infinite' }}>
+                                                                ⭐ HOJE
+                                                            </div>
+                                                        )}
+                                                        {deal.tasks && deal.tasks.some(t => !t.completed && getTaskStatus(t)?.status === 'overdue') && (
+                                                            <div style={{ marginTop: '3px', padding: '4px', background: '#C73A3A', borderRadius: '3px', fontSize: '10px', color: '#FFF', fontWeight: '700', textAlign: 'center', animation: 'pulse 1.5s infinite' }}>
+                                                                🔴 VENCIDA
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                                <button className="btn-add-stage" onClick={() => openModal('deal', null, stage)}>➕</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* DEALS */}
+                            {activeTab === 'deals' && (
+                                <div className="table-container">
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Oportunidade</th>
+                                                <th>Cliente</th>
+                                                <th>Parceiro</th>
+                                                <th>Valor</th>
+                                                <th>Estágio</th>
+                                                <th>Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredDeals.length > 0 ? (
+                                                filteredDeals.map(deal => (
+                                                    <tr key={deal.id}>
+                                                        <td><strong>{deal.title}</strong></td>
+                                                        <td>{deal.client}</td>
+                                                        <td><strong style={{ color: 'var(--accent)' }}>{deal.partner || '-'}</strong></td>
+                                                        <td>R$ {deal.value.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</td>
+                                                        <td><span className="status-badge status-success">{stageLabels[deal.stage]}</span></td>
+                                                        <td>
+                                                            <button className="btn btn-sm btn-primary" onClick={() => openModal('deal-details', deal)} style={{ marginRight: '6px' }}>👁️</button>
+                                                            <button className="btn btn-sm btn-secondary" onClick={() => handleDeleteDeal(deal.id)} style={{ color: 'var(--danger)' }}>🗑️</button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>Nenhuma oportunidade encontrada</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
+                            {/* FUNIL DE VENDAS */}
+                            {activeTab === 'funil' && (
+                                <div>
+                                    <div className="metrics-grid" style={{ marginBottom: '32px' }}>
+                                        <div className="metric-card">
+                                            <div className="metric-label">Total de Deals</div>
+                                            <div className="metric-value">{dealsCount}</div>
+                                            <div className="metric-change">Em pipeline</div>
+                                        </div>
+                                        <div className="metric-card">
+                                            <div className="metric-label">Valor Total</div>
+                                            <div className="metric-value">R$ {(totalValue / 1000000).toFixed(1)}M</div>
+                                            <div className="metric-change">Em oportunidades</div>
+                                        </div>
+                                        <div className="metric-card">
+                                            <div className="metric-label">Deals Concluídos</div>
+                                            <div className="metric-value">{closedDeals}</div>
+                                            <div className="metric-change">Finalizado</div>
+                                        </div>
+                                        <div className="metric-card">
+                                            <div className="metric-label">Taxa de Conversão</div>
+                                            <div className="metric-value">{dealsCount > 0 ? ((closedDeals / dealsCount) * 100).toFixed(1) : 0}%</div>
+                                            <div className="metric-change">Meta: 30%</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="table-container" style={{ marginBottom: '24px' }}>
+                                        <div style={{ padding: '20px' }}>
+                                            <h3 style={{ color: 'var(--primary)', marginBottom: '20px', fontSize: '16px' }}>Distribuição por Estágio</h3>
+                                            {stages.map(stage => {
+                                                const stageDeals = deals.filter(d => d.stage === stage);
+                                                if (stageDeals.length === 0) return null;
+                                                
+                                                const stageValue = stageDeals.reduce((acc, d) => acc + d.value, 0);
+                                                const stageRevenue = stageDeals.reduce((acc, d) => acc + getRevenuePotential(d), 0);
+                                                const percentage = dealsCount > 0 ? ((stageDeals.length / dealsCount) * 100).toFixed(0) : 0;
+                                                const maxCount = Math.max(...stages.map(s => deals.filter(d => d.stage === s).length), 1);
+                                                const barWidth = (stageDeals.length / maxCount) * 100;
+
+                                                return (
+                                                    <div key={stage} style={{ marginBottom: '20px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                                            <span style={{ fontWeight: '600', color: 'var(--text)' }}>{stageLabels[stage]}</span>
+                                                            <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>{stageDeals.length} deal{stageDeals.length !== 1 ? 's' : ''} ({percentage}%)</span>
+                                                        </div>
+                                                        <div style={{ background: 'var(--bg)', borderRadius: '6px', height: '24px', overflow: 'hidden' }}>
+                                                            <div style={{ 
+                                                                width: `${barWidth}%`, 
+                                                                height: '100%', 
+                                                                background: 'linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%)',
+                                                                transition: 'width 0.3s ease',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'flex-end',
+                                                                paddingRight: '8px'
+                                                            }}>
+                                                                {barWidth > 15 && <span style={{ fontSize: '11px', color: 'white', fontWeight: '600' }}>R$ {(stageValue / 1000).toFixed(0)}k</span>}
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
+                                                            <span style={{ color: 'var(--text-light)' }}>Volume: R$ {(stageValue / 1000000).toFixed(1)}M</span>
+                                                            <span style={{ color: 'var(--accent)', fontWeight: '700' }}>💰 Receita: R$ {(stageRevenue / 1000).toFixed(0)}k</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="table-container">
+                                        <table className="table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Estágio</th>
+                                                    <th>Quantidade</th>
+                                                    <th>Valor Total</th>
+                                                    <th>Ticket Médio</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {stages.map(stage => {
+                                                    const stageDeals = deals.filter(d => d.stage === stage);
+                                                    if (stageDeals.length === 0) return null;
+                                                    
+                                                    const stageValue = stageDeals.reduce((acc, d) => acc + d.value, 0);
+                                                    const avgValue = stageValue / stageDeals.length;
+
+                                                    return (
+                                                        <tr key={stage}>
+                                                            <td><strong>{stageLabels[stage]}</strong></td>
+                                                            <td>{stageDeals.length}</td>
+                                                            <td>R$ {stageValue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</td>
+                                                            <td>R$ {avgValue.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* MÉTRICAS */}
+                            {activeTab === 'metrics' && (
+                                <div style={{ padding: '20px' }}>
+                                    <h2 style={{ color: 'var(--primary)', marginBottom: '20px', fontSize: '24px' }}>📈 Métricas por Produto</h2>
+                                    
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                                        {Object.entries(productLabels).map(([productId, productName]) => {
+                                            const metrics = getProductMetrics()[productId];
+                                            const allDeals = deals.filter(d => d.product === productId);
+                                            
+                                            return (
+                                                <div key={productId} style={{ background: 'var(--bg)', border: '2px solid var(--accent)', borderRadius: '8px', padding: '20px' }}>
+                                                    <h3 style={{ color: 'var(--primary)', marginBottom: '16px', fontSize: '16px' }}>📦 {productName}</h3>
+                                                    
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                                                            <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Total de Deals</span>
+                                                            <span style={{ fontWeight: '700', color: 'var(--primary)' }}>{allDeals.length}</span>
+                                                        </div>
+                                                        
+                                                        {metrics ? (
+                                                            <>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                                                                    <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Deals Concluídos</span>
+                                                                    <span style={{ fontWeight: '700', color: '#4CAF50' }}>{metrics.completedCount}</span>
+                                                                </div>
+                                                                
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                                                                    <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Taxa de Conversão</span>
+                                                                    <span style={{ fontWeight: '700', color: 'var(--accent)' }}>{metrics.conversionRate}%</span>
+                                                                </div>
+                                                                
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', background: 'rgba(212, 175, 55, 0.1)', borderRadius: '4px', paddingLeft: '8px', paddingRight: '8px' }}>
+                                                                    <span style={{ fontSize: '13px', color: 'var(--text-light)', fontWeight: '600' }}>⏱️ Tempo Médio</span>
+                                                                    <span style={{ fontWeight: '700', color: '#D4AF37' }}>{metrics.avgDays} dias</span>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-light)', fontSize: '12px' }}>
+                                                                Nenhum deal concluído
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div style={{ marginTop: '32px', padding: '20px', background: 'var(--bg)', borderRadius: '8px', borderLeft: '4px solid var(--accent)' }}>
+                                        <h3 style={{ color: 'var(--primary)', marginBottom: '16px' }}>💰 Comissões por Parceiro e Produto</h3>
+                                        <div style={{ overflowX: 'auto' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                                                <thead>
+                                                    <tr style={{ background: 'rgba(27, 77, 62, 0.1)', borderBottom: '2px solid var(--primary)' }}>
+                                                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', color: 'var(--primary)', minWidth: '150px' }}>Parceiro</th>
+                                                        {Object.entries(productLabels).map(([key, label]) => (
+                                                            <th key={key} style={{ padding: '12px', textAlign: 'center', fontWeight: '700', color: 'var(--primary)', fontSize: '11px', minWidth: '120px', whiteSpace: 'normal' }}>{label}</th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {partners.map(partner => (
+                                                        <tr key={partner.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                            <td style={{ padding: '12px', fontWeight: '600', color: 'var(--text)' }}>{partner.name}</td>
+                                                            {Object.entries(productLabels).map(([key]) => (
+                                                                <td key={key} style={{ padding: '12px', textAlign: 'center', color: partner.products.includes(key) ? 'var(--accent)' : 'var(--text-light)', fontWeight: '600' }}>
+                                                                    {partner.productCommissions?.[key] ? `${partner.productCommissions[key]}%` : '-'}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PRODUTOS */}
+                            {activeTab === 'produtos' && (
+                                <div style={{ maxWidth: '800px' }}>
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <button className="btn btn-primary" onClick={() => setFormData({})}>
+                                            ➕ Novo Produto
+                                        </button>
+                                    </div>
+
+                                    {formData.name !== undefined && (
+                                        <div className="table-container" style={{ marginBottom: '24px' }}>
+                                            <div style={{ padding: '20px' }}>
+                                                <h3 style={{ color: 'var(--primary)', marginBottom: '16px' }}>Adicionar Novo Produto</h3>
+                                                <div className="form-group">
+                                                    <label>Nome do Produto *</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={formData.name || ''} 
+                                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                                        placeholder="Ex: Novo Produto"
+                                                    />
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '12px' }}>
+                                                    <button className="btn btn-secondary" onClick={() => setFormData({})}>Cancelar</button>
+                                                    <button className="btn btn-primary" onClick={() => {
+                                                        if (formData.name) {
+                                                            const newProduct = {
+                                                                id: Date.now(),
+                                                                key: formData.name.toLowerCase().replace(/\\s+/g, '-'),
+                                                                name: formData.name
+                                                            };
+                                                            setProducts([...products, newProduct]);
+                                                            setFormData({});
+                                                        }
+                                                    }}>Criar Produto</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="table-container">
+                                        <table className="table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Produto</th>
+                                                    <th>Código</th>
+                                                    <th style={{ textAlign: 'center' }}>Ações</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {products.length > 0 ? (
+                                                    products.map(product => (
+                                                        <tr key={product.id}>
+                                                            <td><strong>{product.name}</strong></td>
+                                                            <td style={{ fontSize: '12px', color: 'var(--text-light)', fontFamily: 'monospace' }}>{product.key}</td>
+                                                            <td style={{ textAlign: 'center' }}>
+                                                                <button 
+                                                                    className="btn btn-sm btn-secondary" 
+                                                                    onClick={() => {
+                                                                        const newProducts = products.filter(p => p.id !== product.id);
+                                                                        setProducts(newProducts);
+                                                                    }}
+                                                                    style={{ color: 'var(--danger)' }}
+                                                                >
+                                                                    🗑️
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr><td colSpan="3" style={{ textAlign: 'center', padding: '40px' }}>Nenhum produto cadastrado</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PARCEIROS */}
+                            {activeTab === 'partners' && (
+                                <div className="partners-container">
+                                    <div className="partners-list">
+                                        <div className="partners-list-header">
+                                            Parceiros Cadastrados
+                                        </div>
+                                        <div className="partners-list-items">
+                                            {partners.map(partner => (
+                                                <div key={partner.id} className={`partner-item ${selectedPartner?.id === partner.id ? 'active' : ''}`} onClick={() => setSelectedPartner(partner)}>
+                                                    <div className="partner-name">{partner.name}</div>
+                                                    <div className="partner-meta">Fee: {partner.fee}% • {partner.products.length} produtos</div>
+                                                </div>
+                                            ))}
+                                            <div style={{ padding: '12px' }}>
+                                                <button className="btn btn-primary" onClick={() => { setSelectedPartner(null); setFormData({}); }} style={{ width: '100%' }}>➕ Novo Parceiro</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="partners-form">
+                                        <h3>{selectedPartner ? `Editar: ${selectedPartner.name}` : 'Novo Parceiro'}</h3>
+                                        {selectedPartner ? (
+                                            <>
+                                                <div className="form-group">
+                                                    <label>Nome</label>
+                                                    <input type="text" value={selectedPartner.name} onChange={(e) => setSelectedPartner({...selectedPartner, name: e.target.value})} />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Fee Padrão (%)</label>
+                                                    <input type="number" value={selectedPartner.fee} onChange={(e) => setSelectedPartner({...selectedPartner, fee: parseFloat(e.target.value)})} step="0.1" />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Email</label>
+                                                    <input type="email" value={selectedPartner.email} onChange={(e) => setSelectedPartner({...selectedPartner, email: e.target.value})} />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Contato</label>
+                                                    <input type="tel" value={selectedPartner.contact} onChange={(e) => setSelectedPartner({...selectedPartner, contact: e.target.value})} />
+                                                </div>
+
+                                                <div className="form-group">
+                                                    <label>Logo do Parceiro 🖼️</label>
+                                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                                                        <div>
+                                                            <input 
+                                                                type="file" 
+                                                                accept="image/*" 
+                                                                onChange={(e) => handleLogoUpload(e, true)}
+                                                                style={{ display: 'none' }}
+                                                                id={`logo-upload-edit-${selectedPartner.id}`}
+                                                            />
+                                                            <label htmlFor={`logo-upload-edit-${selectedPartner.id}`} className="btn btn-primary" style={{ cursor: 'pointer', marginBottom: '8px', display: 'inline-block' }}>
+                                                                📤 Selecionar Logo
+                                                            </label>
+                                                            <div style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '4px' }}>
+                                                                PNG, JPG, SVG (máx. 2MB)
+                                                            </div>
+                                                        </div>
+                                                        {selectedPartner.logo && (
+                                                            <div style={{ 
+                                                                width: '80px', 
+                                                                height: '80px', 
+                                                                border: '2px solid var(--border)',
+                                                                borderRadius: '8px',
+                                                                padding: '8px',
+                                                                background: 'var(--bg)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                overflow: 'hidden'
+                                                            }}>
+                                                                <img src={selectedPartner.logo} alt={selectedPartner.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {selectedPartner.logo && (
+                                                        <button 
+                                                            className="btn btn-secondary" 
+                                                            onClick={() => setSelectedPartner({...selectedPartner, logo: null})}
+                                                            style={{ marginTop: '8px', width: '100%' }}
+                                                        >
+                                                            ✕ Remover Logo
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                
+                                                <div className="form-group">
+                                                    <label style={{ fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>📦 Produtos e Comissões</label>
+                                                    <div style={{ background: 'var(--bg)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                            <thead>
+                                                                <tr style={{ background: 'rgba(27, 77, 62, 0.1)', borderBottom: '2px solid var(--border)' }}>
+                                                                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', fontSize: '12px', color: 'var(--primary)', width: '50px' }}>✓</th>
+                                                                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', fontSize: '12px', color: 'var(--primary)' }}>Produto</th>
+                                                                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: '700', fontSize: '12px', color: 'var(--primary)', width: '100px' }}>Comissão</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {Object.entries(productLabels).map(([key, label]) => {
+                                                                    const isActive = selectedPartner.products.includes(key);
+                                                                    return (
+                                                                        <tr key={key} style={{ borderBottom: '1px solid var(--border)', background: isActive ? 'rgba(212, 175, 55, 0.05)' : 'transparent' }}>
+                                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                                <input 
+                                                                                    type="checkbox" 
+                                                                                    checked={isActive}
+                                                                                    onChange={(e) => {
+                                                                                        if (e.target.checked) {
+                                                                                            setSelectedPartner({
+                                                                                                ...selectedPartner, 
+                                                                                                products: [...selectedPartner.products, key]
+                                                                                            });
+                                                                                        } else {
+                                                                                            setSelectedPartner({
+                                                                                                ...selectedPartner, 
+                                                                                                products: selectedPartner.products.filter(p => p !== key)
+                                                                                            });
+                                                                                        }
+                                                                                    }}
+                                                                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                                                />
+                                                                            </td>
+                                                                            <td style={{ padding: '12px', fontSize: '13px', color: isActive ? 'var(--text)' : 'var(--text-light)', fontWeight: isActive ? '500' : '400' }}>
+                                                                                {label}
+                                                                            </td>
+                                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                                {isActive ? (
+                                                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                                                                        <input 
+                                                                                            type="number" 
+                                                                                            value={selectedPartner.productCommissions?.[key] || ''}
+                                                                                            onChange={(e) => setSelectedPartner({
+                                                                                                ...selectedPartner, 
+                                                                                                productCommissions: {
+                                                                                                    ...selectedPartner.productCommissions,
+                                                                                                    [key]: parseFloat(e.target.value) || 0
+                                                                                                }
+                                                                                            })}
+                                                                                            step="0.1"
+                                                                                            style={{ width: '50px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', textAlign: 'center', fontSize: '13px', fontWeight: '600' }}
+                                                                                            placeholder="0"
+                                                                                        />
+                                                                                        <span style={{ fontSize: '12px', color: 'var(--text-light)', fontWeight: '600' }}>%</span>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <span style={{ fontSize: '12px', color: '#999', fontStyle: 'italic' }}>Não trabalha</span>
+                                                                                )}
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="form-group">
+                                                    <label>Critérios / Especializações</label>
+                                                    <textarea value={selectedPartner.criteria} onChange={(e) => setSelectedPartner({...selectedPartner, criteria: e.target.value})} rows="3" placeholder="Descrição dos critérios, especialidades ou segmentação..." />
+                                                </div>
+                                                <div className="modal-footer">
+                                                    <button className="btn btn-secondary" onClick={() => handleDeletePartner(selectedPartner.id)}>🗑️ Deletar</button>
+                                                    <button className="btn btn-secondary" onClick={() => setSelectedPartner(null)}>Cancelar</button>
+                                                    <button className="btn btn-primary" onClick={() => { 
+                                                        setPartners(partners.map(p => p.id === selectedPartner.id ? selectedPartner : p)); 
+                                                        setSelectedPartner(null); 
+                                                    }}>Salvar</button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="form-group">
+                                                    <label>Nome *</label>
+                                                    <input type="text" value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Nome do parceiro" />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Fee Padrão (%) *</label>
+                                                    <input type="number" value={formData.fee || ''} onChange={(e) => setFormData({...formData, fee: e.target.value})} placeholder="2.5" step="0.1" />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Email</label>
+                                                    <input type="email" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Contato</label>
+                                                    <input type="tel" value={formData.contact || ''} onChange={(e) => setFormData({...formData, contact: e.target.value})} />
+                                                </div>
+
+                                                <div className="form-group">
+                                                    <label>Logo do Parceiro 🖼️</label>
+                                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                                                        <div>
+                                                            <input 
+                                                                type="file" 
+                                                                accept="image/*" 
+                                                                onChange={(e) => handleLogoUpload(e, false)}
+                                                                style={{ display: 'none' }}
+                                                                id="logo-upload-new"
+                                                            />
+                                                            <label htmlFor="logo-upload-new" className="btn btn-primary" style={{ cursor: 'pointer', marginBottom: '8px', display: 'inline-block' }}>
+                                                                📤 Selecionar Logo
+                                                            </label>
+                                                            <div style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '4px' }}>
+                                                                PNG, JPG, SVG (máx. 2MB)
+                                                            </div>
+                                                        </div>
+                                                        {formData.logo && (
+                                                            <div style={{ 
+                                                                width: '80px', 
+                                                                height: '80px', 
+                                                                border: '2px solid var(--border)',
+                                                                borderRadius: '8px',
+                                                                padding: '8px',
+                                                                background: 'var(--bg)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                overflow: 'hidden'
+                                                            }}>
+                                                                <img src={formData.logo} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {formData.logo && (
+                                                        <button 
+                                                            className="btn btn-secondary" 
+                                                            onClick={() => setFormData({...formData, logo: null})}
+                                                            style={{ marginTop: '8px', width: '100%' }}
+                                                        >
+                                                            ✕ Remover Logo
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                <div className="form-group">
+                                                    <label style={{ fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>📦 Produtos e Comissões</label>
+                                                    <div style={{ background: 'var(--bg)', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                            <thead>
+                                                                <tr style={{ background: 'rgba(27, 77, 62, 0.1)', borderBottom: '2px solid var(--border)' }}>
+                                                                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', fontSize: '12px', color: 'var(--primary)', width: '50px' }}>✓</th>
+                                                                    <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', fontSize: '12px', color: 'var(--primary)' }}>Produto</th>
+                                                                    <th style={{ padding: '12px', textAlign: 'center', fontWeight: '700', fontSize: '12px', color: 'var(--primary)', width: '100px' }}>Comissão</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {Object.entries(productLabels).map(([key, label]) => {
+                                                                    const isActive = formData.products?.includes(key) || false;
+                                                                    const commValue = formData.productCommissions?.[key] ?? formData.fee ?? '';
+                                                                    return (
+                                                                        <tr key={key} style={{ borderBottom: '1px solid var(--border)', background: isActive ? 'rgba(212, 175, 55, 0.05)' : 'transparent' }}>
+                                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                                <input 
+                                                                                    type="checkbox" 
+                                                                                    checked={isActive}
+                                                                                    onChange={(e) => {
+                                                                                        const products = formData.products || [];
+                                                                                        if (e.target.checked) {
+                                                                                            setFormData({
+                                                                                                ...formData, 
+                                                                                                products: [...products, key],
+                                                                                                productCommissions: {
+                                                                                                    ...formData.productCommissions,
+                                                                                                    [key]: parseFloat(formData.fee) || 0
+                                                                                                }
+                                                                                            });
+                                                                                        } else {
+                                                                                            setFormData({
+                                                                                                ...formData, 
+                                                                                                products: products.filter(p => p !== key)
+                                                                                            });
+                                                                                        }
+                                                                                    }}
+                                                                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                                                                />
+                                                                            </td>
+                                                                            <td style={{ padding: '12px', fontSize: '13px', color: isActive ? 'var(--text)' : 'var(--text-light)', fontWeight: isActive ? '500' : '400' }}>
+                                                                                {label}
+                                                                            </td>
+                                                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                                                {isActive ? (
+                                                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                                                                        <input 
+                                                                                            type="number" 
+                                                                                            value={commValue}
+                                                                                            onChange={(e) => setFormData({
+                                                                                                ...formData, 
+                                                                                                productCommissions: {
+                                                                                                    ...formData.productCommissions,
+                                                                                                    [key]: parseFloat(e.target.value) || 0
+                                                                                                }
+                                                                                            })}
+                                                                                            step="0.1"
+                                                                                            style={{ width: '50px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '4px', textAlign: 'center', fontSize: '13px', fontWeight: '600' }}
+                                                                                            placeholder="0"
+                                                                                        />
+                                                                                        <span style={{ fontSize: '12px', color: 'var(--text-light)', fontWeight: '600' }}>%</span>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <span style={{ fontSize: '12px', color: '#999', fontStyle: 'italic' }}>Não trabalha</span>
+                                                                                )}
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Critérios / Especializações</label>
+                                                    <textarea value={formData.criteria || ''} onChange={(e) => setFormData({...formData, criteria: e.target.value})} rows="3" placeholder="Descrição dos critérios, especialidades ou segmentação..." />
+                                                </div>
+                                                <div className="modal-footer">
+                                                    <button className="btn btn-secondary" onClick={() => setFormData({})}>Cancelar</button>
+                                                    <button className="btn btn-primary" onClick={handleSavePartner}>Criar Parceiro</button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* MODAL */}
+                    {showModal && (
+                        <div className="modal-overlay" onClick={closeModal}>
+                            <div className="modal" onClick={(e) => e.stopPropagation()}>
+                                {modalType === 'deal-details' && selectedDeal && (
+                                    <>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                            <h2>{editingDeal ? '✏️ Editar Lead' : selectedDeal.title}</h2>
+                                            {!editingDeal && (
+                                                <button className="btn btn-primary btn-sm" onClick={() => setEditingDeal(true)}>✏️ Editar</button>
+                                            )}
+                                        </div>
+
+                                        {editingDeal ? (
+                                            <div>
+                                                <div className="form-group">
+                                                    <label>Título do LEAD *</label>
+                                                    <input type="text" value={selectedDeal.title || ''} onChange={(e) => setSelectedDeal({...selectedDeal, title: e.target.value})} />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Nome do Cliente *</label>
+                                                    <input type="text" value={selectedDeal.client || ''} onChange={(e) => setSelectedDeal({...selectedDeal, client: e.target.value})} />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Telefone *</label>
+                                                    <input type="tel" value={selectedDeal.phone || ''} onChange={(e) => setSelectedDeal({...selectedDeal, phone: e.target.value})} />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Email *</label>
+                                                    <input type="email" value={selectedDeal.email || ''} onChange={(e) => setSelectedDeal({...selectedDeal, email: e.target.value})} />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Parceiro *</label>
+                                                    <select value={selectedDeal.partner || ''} onChange={(e) => setSelectedDeal({...selectedDeal, partner: e.target.value})}>
+                                                        <option value="">Selecione um parceiro</option>
+                                                        {partners.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Produto *</label>
+                                                    <select value={selectedDeal.product || ''} onChange={(e) => setSelectedDeal({...selectedDeal, product: e.target.value})}>
+                                                        <option value="">Selecione um produto</option>
+                                                        {Object.entries(productLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Valor do Negócio (R$) *</label>
+                                                    <input type="number" value={selectedDeal.value || ''} onChange={(e) => setSelectedDeal({...selectedDeal, value: parseFloat(e.target.value)})} />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Comissão (%)</label>
+                                                    <input type="number" value={selectedDeal.commission || ''} onChange={(e) => setSelectedDeal({...selectedDeal, commission: parseFloat(e.target.value)})} step="0.1" />
+                                                </div>
+                                                <div className="form-group">
+                                                    <label>Estágio</label>
+                                                    <select value={selectedDeal.stage || 'lead-novo'} onChange={(e) => setSelectedDeal({...selectedDeal, stage: e.target.value})}>
+                                                        {stages.map(s => <option key={s} value={s}>{stageLabels[s]}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="modal-footer">
+                                                    <button className="btn btn-secondary" onClick={() => setEditingDeal(false)}>Cancelar</button>
+                                                    <button className="btn btn-primary" onClick={handleSaveDealEdit}>💾 Salvar Alterações</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="info-card">
+                                                    <div className="info-row">
+                                                        <div className="info-item">
+                                                            <div className="info-label">Cliente</div>
+                                                            <div className="info-value">{selectedDeal.client}</div>
+                                                        </div>
+                                                        <div className="info-item">
+                                                            <div className="info-label">Parceiro</div>
+                                                            <div className="info-value">{selectedDeal.partner || '-'}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="info-row">
+                                                        <div className="info-item">
+                                                            <div className="info-label">Telefone</div>
+                                                            <div className="info-value">{selectedDeal.phone}</div>
+                                                        </div>
+                                                        <div className="info-item">
+                                                            <div className="info-label">Email</div>
+                                                            <div className="info-value">{selectedDeal.email}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="info-row">
+                                                        <div className="info-item">
+                                                            <div className="info-label">Produto</div>
+                                                            <div className="info-value">{productLabels[selectedDeal.product] || '-'}</div>
+                                                        </div>
+                                                        <div className="info-item">
+                                                            <div className="info-label">Valor</div>
+                                                            <div className="info-value">R$ {selectedDeal.value.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="info-row">
+                                                        <div className="info-item">
+                                                            <div className="info-label">Comissão</div>
+                                                            <div className="info-value">{selectedDeal.commission}% (R$ {selectedDeal.commissionValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})</div>
+                                                        </div>
+                                                        <div className="info-item">
+                                                            <div className="info-label">Estágio</div>
+                                                            <div className="info-value">{stageLabels[selectedDeal.stage]}</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <h3 style={{ color: 'var(--primary)', marginTop: '20px', marginBottom: '12px' }}>✅ Tarefas ({selectedDeal.tasks ? selectedDeal.tasks.filter(t => !t.completed).length : 0})</h3>
+                                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                                                    <input 
+                                                        type="text" 
+                                                        value={newTaskText} 
+                                                        onChange={(e) => setNewTaskText(e.target.value)} 
+                                                        onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
+                                                        placeholder="Adicione uma tarefa..." 
+                                                        style={{ flex: 1, padding: '8px', border: '1px solid var(--border)', borderRadius: '6px', minWidth: '200px' }} 
+                                                    />
+                                                    <input 
+                                                        type="datetime-local" 
+                                                        value={newTaskDate} 
+                                                        onChange={(e) => setNewTaskDate(e.target.value)}
+                                                        style={{ padding: '8px', border: '1px solid var(--border)', borderRadius: '6px' }} 
+                                                    />
+                                                    <button className="btn btn-primary" onClick={handleAddTask} style={{ whiteSpace: 'nowrap' }}>➕ Tarefa</button>
+                                                </div>
+                                                {selectedDeal.tasks && selectedDeal.tasks.length > 0 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                                                        {selectedDeal.tasks.map(task => {
+                                                            const taskStatus = getTaskStatus(task);
+                                                            let borderColor = 'var(--accent)';
+                                                            let bgColor = 'var(--bg)';
+                                                            
+                                                            if (taskStatus?.status === 'overdue') {
+                                                                borderColor = '#C73A3A';
+                                                                bgColor = 'rgba(199, 58, 58, 0.08)';
+                                                            } else if (taskStatus?.status === 'today') {
+                                                                borderColor = '#D4AF37';
+                                                                bgColor = 'rgba(212, 175, 55, 0.15)';
+                                                            }
+                                                            
+                                                            return (
+                                                                <div key={task.id} style={{ background: bgColor, padding: '12px', borderRadius: '6px', borderLeft: '4px solid ' + borderColor, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <input 
+                                                                        type="checkbox" 
+                                                                        checked={task.completed} 
+                                                                        onChange={() => handleToggleTask(task.id)}
+                                                                        style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                                                                    />
+                                                                    <div style={{ flex: 1 }}>
+                                                                        <div style={{ textDecoration: task.completed ? 'line-through' : 'none', color: task.completed ? 'var(--text-light)' : 'var(--text)', fontWeight: '500' }}>
+                                                                            {task.text}
+                                                                        </div>
+                                                                        <div style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '3px' }}>
+                                                                            Criada: {task.date}
+                                                                        </div>
+                                                                        {task.scheduledDate && (
+                                                                            <div style={{ fontSize: '12px', fontWeight: '600', color: taskStatus?.color, marginTop: '3px' }}>
+                                                                                {taskStatus?.label} - {new Date(task.scheduledDate).toLocaleString('pt-BR')}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <button style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px' }} onClick={() => handleDeleteTask(task.id)}>🗑️</button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-light)', fontSize: '13px', marginBottom: '20px' }}>Nenhuma tarefa criada</div>
+                                                )}
+                                                <h3 style={{ color: 'var(--primary)', marginTop: '20px', marginBottom: '12px' }}>📝 Notas</h3>
+                                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                                    <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Adicione uma nota..." style={{ flex: 1, padding: '8px', border: '1px solid var(--border)', borderRadius: '6px', minHeight: '60px' }} />
+                                                    <button className="btn btn-primary" onClick={handleAddNote} style={{ height: 'fit-content' }}>Adicionar</button>
+                                                </div>
+                                                {selectedDeal.notes && selectedDeal.notes.length > 0 ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                        {selectedDeal.notes.map(note => (
+                                                            <div key={note.id} style={{ background: 'var(--bg)', padding: '12px', borderRadius: '6px', borderLeft: '3px solid var(--primary)' }}>
+                                                                <div style={{ marginBottom: '8px' }}>{note.text}</div>
+                                                                <div style={{ fontSize: '11px', color: 'var(--text-light)', marginBottom: '6px' }}>{note.date}</div>
+                                                                <button style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }} onClick={() => handleDeleteNote(note.id)}>🗑️ Deletar</button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-light)' }}>Nenhuma nota adicionada</div>
+                                                )}
+                                                <div className="modal-footer" style={{ marginTop: '24px' }}>
+                                                    <button className="btn btn-secondary" onClick={closeModal}>Fechar</button>
+                                                    <button className="btn btn-secondary" onClick={() => handleDeleteDeal(selectedDeal.id)} style={{ color: 'var(--danger)' }}>🗑️ Deletar Deal</button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </>
+                                )}
+
+                                {modalType === 'deal' && (
+                                    <>
+                                        <h2>➕ Nova Oportunidade</h2>
+                                        <div className="form-group">
+                                            <label>Título do LEAD *</label>
+                                            <input type="text" value={formData.title || ''} onChange={(e) => setFormData({...formData, title: e.target.value})} placeholder="Ex: Financiamento - Apartamento Centro" />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Nome do Cliente *</label>
+                                            <input type="text" value={formData.client || ''} onChange={(e) => setFormData({...formData, client: e.target.value})} placeholder="Nome completo" />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Telefone *</label>
+                                            <input type="tel" value={formData.phone || ''} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="(11) 98765-4321" />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Email *</label>
+                                            <input type="email" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="cliente@email.com" />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Parceiro *</label>
+                                            <select value={formData.partner || ''} onChange={(e) => setFormData({...formData, partner: e.target.value})}>
+                                                <option value="">Selecione um parceiro</option>
+                                                {partners.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Produto *</label>
+                                            <select value={formData.product || ''} onChange={(e) => setFormData({...formData, product: e.target.value})}>
+                                                <option value="">Selecione um produto</option>
+                                                {Object.entries(productLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Valor do Negócio (R$) *</label>
+                                            <input type="number" value={formData.value || ''} onChange={(e) => setFormData({...formData, value: e.target.value})} placeholder="0.00" />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Comissão (%)</label>
+                                            <input type="number" value={formData.commission || ''} onChange={(e) => setFormData({...formData, commission: e.target.value})} placeholder="Ex: 2.5" step="0.1" />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Estágio</label>
+                                            <select value={formData.stage || 'lead-novo'} onChange={(e) => setFormData({...formData, stage: e.target.value})}>
+                                                {stages.map(s => <option key={s} value={s}>{stageLabels[s]}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="modal-footer">
+                                            <button className="btn btn-secondary" onClick={closeModal}>Cancelar</button>
+                                            <button className="btn btn-primary" onClick={handleAddDeal}>Adicionar</button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
