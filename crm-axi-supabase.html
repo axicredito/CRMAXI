@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AXI - CRM com Supabase</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; background: #f5f5f5; }
+        
+        :root {
+            --primary: #1B4D3E;
+            --accent: #D4AF37;
+            --bg: #F8F9F7;
+            --border: #E8EAE6;
+            --text: #2C3E50;
+            --danger: #C73A3A;
+        }
+
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary) 0%, #2C5F4F 100%);
+        }
+
+        .login-box {
+            background: white;
+            padding: 48px 40px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .login-subtitle {
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, #2C5F4F 100%);
+            color: white;
+        }
+
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-2px); }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .error-msg {
+            background: rgba(199, 58, 58, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .success-msg {
+            background: rgba(27, 77, 62, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .crm-container {
+            min-height: 100vh;
+            padding: 20px;
+            background: var(--bg);
+        }
+
+        .crm-header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .crm-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            color: #999;
+        }
+
+        .btn-logout {
+            background: rgba(199, 58, 58, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .deals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .deal-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .deal-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .deal-client {
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 4px;
+        }
+
+        .deal-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 12px;
+        }
+
+        .deals-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .deals-empty div {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // =============== SUPABASE ===============
+        const SUPABASE_URL = 'https://rjlzmwzxpluajdppvlvl.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqbHptd3p4cGx1YWpkcHB2bHZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwOTA3NjgsImV4cCI6MjA5NTY2Njc2OH0.ZUk2HM_efE6LKyKnLGS7wUsKTjWl-oyvwKlFlfuuIA8';
+
+        let supabase = null;
+
+        // Esperar o Supabase carregar
+        setTimeout(() => {
+            try {
+                if (window.supabase) {
+                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                    console.log('✅ Supabase conectado');
+                } else {
+                    console.error('❌ window.supabase não disponível');
+                }
+            } catch (err) {
+                console.error('❌ Erro ao conectar Supabase:', err);
+            }
+        }, 500);
+
+        // =============== LOGIN PAGE ===============
+        function LoginPage() {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError('');
+
+                if (!supabase) {
+                    setError('Supabase não carregou. Recarregue a página.');
+                    setLoading(false);
+                    return;
+                }
+
+                try {
+                    const { error: signInError } = await supabase.auth.signInWithPassword({
+                        email,
+                        password
+                    });
+
+                    if (signInError) {
+                        setError(signInError.message || 'Erro ao fazer login. Verifique e-mail e senha.');
+                    }
+                } catch (err) {
+                    setError('Erro na conexão. Tente novamente.');
+                    console.error(err);
+                }
+
+                setLoading(false);
+            };
+
+            return (
+                <div className="login-page">
+                    <div className="login-box">
+                        <div className="login-title">🏢 AXI CRM</div>
+                        <div className="login-subtitle">Crédito Imobiliário — Acesso da Equipe</div>
+
+                        <form onSubmit={handleLogin}>
+                            {error && <div className="error-msg">{error}</div>}
+
+                            <div className="form-group">
+                                <label>E-mail</label>
+                                <input
+                                    type="email"
+                                    placeholder="seu@email.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Senha</label>
+                                <input
+                                    type="password"
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <button className="btn btn-primary" type="submit" disabled={loading}>
+                                {loading ? '⏳ Entrando...' : '🔐 Entrar'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // =============== CRM APP ===============
+        function CRMApp({ session, user }) {
+            const [deals, setDeals] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                loadDeals();
+            }, []);
+
+            const loadDeals = async () => {
+                try {
+                    const { data, error } = await supabase
+                        .from('deals')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+
+                    if (error) {
+                        console.error('Erro ao carregar deals:', error);
+                    } else {
+                        setDeals(data || []);
+                    }
+                } catch (err) {
+                    console.error('Erro:', err);
+                }
+                setLoading(false);
+            };
+
+            const handleLogout = async () => {
+                await supabase.auth.signOut();
+            };
+
+            return (
+                <div className="crm-container">
+                    <div className="crm-header">
+                        <div className="crm-title">🏢 AXI CRM</div>
+                        <div className="user-info">
+                            <span>👤 {user?.email?.split('@')[0]}</span>
+                            <button className="btn-logout" onClick={handleLogout}>
+                                🚪 Sair
+                            </button>
+                        </div>
+                    </div>
+
+                    {loading ? (
+                        <div className="deals-empty">
+                            <div>⏳</div>
+                            <div>Carregando deals...</div>
+                        </div>
+                    ) : deals.length === 0 ? (
+                        <div className="deals-empty">
+                            <div>📭</div>
+                            <div>Nenhum deal cadastrado</div>
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ marginBottom: '16px', fontSize: '13px', color: '#999' }}>
+                                Total de deals: <strong>{deals.length}</strong>
+                            </div>
+                            <div className="deals-grid">
+                                {deals.map((deal) => (
+                                    <div key={deal.id} className="deal-card">
+                                        <div className="deal-title">{deal.title}</div>
+                                        <div className="deal-client">👤 {deal.client}</div>
+                                        <div className="deal-client">📱 {deal.phone}</div>
+                                        <div className="deal-client">📧 {deal.email}</div>
+                                        <div className="deal-client">🤝 {deal.partner || 'Sem parceiro'}</div>
+                                        <div className="deal-value">
+                                            R$ {parseFloat(deal.value).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                                        </div>
+                                        <div className="deal-client" style={{ marginTop: '8px', color: '#1B4D3E', fontWeight: '600' }}>
+                                            Estágio: {deal.stage}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
+            );
+        }
+
+        // =============== APP RAIZ ===============
+        function App() {
+            const [session, setSession] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [supabaseError, setSupabaseError] = useState(false);
+
+            useEffect(() => {
+                // Esperar Supabase carregar
+                const checkSupabase = setInterval(() => {
+                    if (window.supabase && supabase) {
+                        clearInterval(checkSupabase);
+                        
+                        // Verificar sessão
+                        supabase.auth.getSession().then(({ data: { session } }) => {
+                            setSession(session);
+                            setLoading(false);
+                        }).catch(err => {
+                            console.error('Erro ao carregar sessão:', err);
+                            setSupabaseError(true);
+                            setLoading(false);
+                        });
+
+                        // Escutar mudanças
+                        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+                            (_event, session) => {
+                                setSession(session);
+                            }
+                        );
+
+                        return () => subscription?.unsubscribe();
+                    }
+                }, 100);
+
+                // Timeout de 5 segundos
+                setTimeout(() => {
+                    if (loading) {
+                        setSupabaseError(true);
+                        setLoading(false);
+                    }
+                }, 5000);
+
+                return () => clearInterval(checkSupabase);
+            }, []);
+
+            if (supabaseError) {
+                return (
+                    <div className="login-page" style={{ background: '#C73A3A' }}>
+                        <div className="login-box" style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>❌</div>
+                            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#C73A3A', marginBottom: '8px' }}>
+                                Erro ao carregar o Supabase
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#999', marginBottom: '24px' }}>
+                                Verifique sua conexão com a internet e recarregue a página.
+                            </div>
+                            <button 
+                                className="btn btn-primary"
+                                onClick={() => window.location.reload()}
+                                style={{ background: 'var(--primary)' }}
+                            >
+                                🔄 Recarregar página
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (loading) {
+                return (
+                    <div className="login-page">
+                        <div className="loading">
+                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
+                            <div>Carregando...</div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (!session) {
+                return <LoginPage />;
+            }
+
+            return <CRMApp session={session} user={session.user} />;
+        }
+
+        // =============== RENDER ===============
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
